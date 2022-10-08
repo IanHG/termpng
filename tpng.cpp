@@ -203,13 +203,13 @@ void image_t_scale
       scaled_data[i] = color32_t{0, 0, 0, 0};
    }
 
-   int y_block_size = ceil((double) image->width  / (double) scaled->width);
-   int y_block_rest = image->width - scaled->width * y_block_size;
-   int x_block_size = ceil((double) image->height / (double) scaled->height);
-   int x_block_rest = image->height - scaled->height * x_block_size;
+   int x_block_size_min = floor((double) image->width  / (double) scaled->width);
+   int x_block_rest     = image->width % scaled->width;
+   int y_block_size_min = floor((double) image->height / (double) scaled->height);
+   int y_block_rest     = image->height % scaled->height;
 
-   printf("%i   %i\n", scaled->width , y_block_rest);
-   printf("%i   %i\n", scaled->height, x_block_rest);
+   //printf("%i   %i   %i   %i\n", image->width,  scaled->width , y_block_size_min, y_block_rest);
+   //printf("%i   %i   %i   %i\n", image->height, scaled->height, x_block_size_min, x_block_rest);
    //exit(2);
 
    color32_t* data       = (color32_t*) image->data;
@@ -232,16 +232,17 @@ void image_t_scale
          sum[x_scaled][4] = 0;  // #
       }
 
-      int y_block_min = min(y_block_size, image->height - y_scaled * y_block_size);
-      //int y_block_min = y_block_size + (y_scaled < y_block_rest ? 1 : 0);
-      for(y_block = 0; y_block < y_block_min; ++y_block)
+      //int y_block_min = min(y_block_size, image->height - y_scaled * y_block_size);
+      int y_block_size = y_block_size_min + (y_scaled < y_block_rest ? 1 : 0);
+      for(y_block = 0; y_block < y_block_size; ++y_block)
       {
-         data_row = data + ( y_scaled * y_block_size + y_block ) * image->width;
+         const int shift = ( y_scaled * y_block_size_min + y_block + min(y_scaled, y_block_rest)) * image->width;
+         data_row = data + shift;
          for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
          {
-            int x_block_min = min(x_block_size, image->width - x_scaled * x_block_size);
-            //int x_block_min = x_block_size + (x_scaled < x_block_rest ? 1 : 0);
-            for(x_block = 0; x_block < x_block_min; ++x_block)
+            //int x_block_min = min(x_block_size, image->width - x_scaled * x_block_size);
+            int x_block_size = x_block_size_min + (x_scaled < x_block_rest ? 1 : 0);
+            for(x_block = 0; x_block < x_block_size; ++x_block)
             {
                sum[x_scaled][0] += data_row->r;
                sum[x_scaled][1] += data_row->g;
