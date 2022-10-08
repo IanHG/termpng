@@ -172,9 +172,10 @@ void image_t_scale
    int i;
    int scaled_size = scaled->width * scaled->height;  
    color32_t* scaled_data = (color32_t*) scaled->data;
+   color32_t  black = {0, 0, 0, 0};
    for(i = 0; i < scaled_size; ++i)
    {
-      scaled_data[i] = color32_t{0, 0, 0, 0};
+      scaled_data[i] = black;
    }
 
    int x_block_size_min = floor((double) image->width  / (double) scaled->width);
@@ -304,7 +305,7 @@ void draw_image(const image_t* const image, char* buffer)
 				color_bg = *(uint32_t*)pixel_bg;
 			}
          /* Write U+2584 (solid block in lower half of cell) */
-         char two_pixel_pr_char[] = { char(0xe2), char(0x96), char(0x84) };
+         char two_pixel_pr_char[] = { (char)0xe2, (char)0x96, (char)0x84 };
 			*buf++ = two_pixel_pr_char[0]; 
 			*buf++ = two_pixel_pr_char[1]; 
 			*buf++ = two_pixel_pr_char[2]; 
