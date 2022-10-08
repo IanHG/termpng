@@ -187,13 +187,13 @@ void image_t_scale
    ,  int                  scaled_height
    )
 {
+   scaled_height = (scaled_height % 2 == 0) ? scaled_height : scaled_height + 1; /* make sure height is an even number */
+
    scaled->width  = scaled_width;
    scaled->height = scaled_height;
    scaled->color_type = image->color_type;
    scaled->bit_depth  = image->bit_depth;
    scaled->data   = malloc(scaled->width * scaled->height * sizeof(color32_t));
-
-   printf("%p\n", scaled->data);
 
    int i;
    int scaled_size = scaled->width * scaled->height;  
@@ -204,15 +204,17 @@ void image_t_scale
    }
 
    int y_block_size = ceil((double) image->width  / (double) scaled->width);
+   int y_block_rest = image->width - scaled->width * y_block_size;
    int x_block_size = ceil((double) image->height / (double) scaled->height);
-   double pixel_scale = (double) 1.0 / ((double) (y_block_size * x_block_size));
-   printf("y_block_size = %d\n", y_block_size);
-   printf("x_block_size = %d\n", x_block_size);
-   printf("scale = %f\n", pixel_scale);
+   int x_block_rest = image->height - scaled->height * x_block_size;
+
+   printf("%i   %i\n", scaled->width , y_block_rest);
+   printf("%i   %i\n", scaled->height, x_block_rest);
+   //exit(2);
 
    color32_t* data       = (color32_t*) image->data;
    color32_t* scale_data = (color32_t*) scaled->data;
-   printf("%p\n", scale_data);
+   int sum[scaled->width][5];
 
    color32_t* scale_data_row;
    color32_t* data_row;
@@ -221,52 +223,44 @@ void image_t_scale
    int y_scaled, x_scaled;
    for(y_scaled = 0; y_scaled < scaled->height; ++y_scaled)
    {  
+      for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+      {
+         sum[x_scaled][0] = 0;  // r
+         sum[x_scaled][1] = 0;  // g
+         sum[x_scaled][2] = 0;  // b
+         sum[x_scaled][3] = 0;  // a
+         sum[x_scaled][4] = 0;  // #
+      }
+
       int y_block_min = min(y_block_size, image->height - y_scaled * y_block_size);
+      //int y_block_min = y_block_size + (y_scaled < y_block_rest ? 1 : 0);
       for(y_block = 0; y_block < y_block_min; ++y_block)
       {
-         scale_data_row = scale_data + y_scaled * scaled->width;
-         data_row       = data       + ( y_scaled * y_block_size + y_block ) * image->width;
+         data_row = data + ( y_scaled * y_block_size + y_block ) * image->width;
          for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
          {
             int x_block_min = min(x_block_size, image->width - x_scaled * x_block_size);
-            int r = 0;
-            int g = 0;
-            int b = 0;
-            int a = 0;
+            //int x_block_min = x_block_size + (x_scaled < x_block_rest ? 1 : 0);
             for(x_block = 0; x_block < x_block_min; ++x_block)
             {
-               r += data_row->r;
-               g += data_row->g;
-               b += data_row->b;
-               a += data_row->a;
+               sum[x_scaled][0] += data_row->r;
+               sum[x_scaled][1] += data_row->g;
+               sum[x_scaled][2] += data_row->b;
+               sum[x_scaled][3] += data_row->a;
+               sum[x_scaled][4] += 1;
                ++data_row;
             }
-
-            //printf("r = %i\n", scale_data_row->r);
-            //printf("r = %i\n", scale_data_row->g);
-            //printf("r = %i\n", scale_data_row->b);
-            //printf("r = %i\n", scale_data_row->a);
-               
-            //scale_data_row->r += ceil((double) data_row->r * pixel_scale);
-            //scale_data_row->g += ceil((double) data_row->g * pixel_scale);
-            //scale_data_row->b += ceil((double) data_row->b * pixel_scale);
-            //scale_data_row->a += ceil((double) data_row->a * pixel_scale);
-            scale_data_row->r = ceil((double) r * pixel_scale * 10);
-            scale_data_row->g = ceil((double) g * pixel_scale * 10);
-            scale_data_row->b = ceil((double) b * pixel_scale * 10);
-            scale_data_row->a = ceil((double) a * pixel_scale * 10);
-
-            //apply_gamma_correction(scale_data_row, 1.0, 2.2);
-
-            //printf("r = %i\n", scale_data_row->r);
-            //printf("r = %i\n", scale_data_row->g);
-            //printf("r = %i\n", scale_data_row->b);
-            //printf("r = %i\n", scale_data_row->a);
-
-            //exit(2);
-
-            ++scale_data_row;
          }
+      }
+      
+      scale_data_row = scale_data + y_scaled * scaled->width;
+      for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+      {
+         double pixel_scale = 1.0 / sum[x_scaled][4];
+         scale_data_row[x_scaled].r = ceil((double) sum[x_scaled][0] * pixel_scale);
+         scale_data_row[x_scaled].g = ceil((double) sum[x_scaled][1] * pixel_scale);
+         scale_data_row[x_scaled].b = ceil((double) sum[x_scaled][2] * pixel_scale);
+         scale_data_row[x_scaled].a = ceil((double) sum[x_scaled][3] * pixel_scale);
       }
    }
 }
@@ -277,9 +271,8 @@ void image_t_scale_percent
    ,  double               percent
    )
 {
-   int width  = ceil(image->width  * percent);
-   int height = ceil(image->height * percent);
-   height = (height % 2 == 0) ? height : height + 1;
+   int width  = round(image->width  * percent);
+   int height = round(image->height * percent);
    image_t_scale(image, scaled, width, height);
 }
 
@@ -379,7 +372,8 @@ int main(int argc, char* argv[])
    }
    
    image_t_print(&image);
-   image_t_scale_percent(&image, &scaled, 0.1);
+   image_t_scale_percent(&image, &scaled, 0.10);
+   //image_t_scale(&image, &scaled, 100, 100);
 
    draw_image(&scaled, buffer);
 
