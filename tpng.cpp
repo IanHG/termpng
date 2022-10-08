@@ -154,32 +154,6 @@ status_t read_png(char* file_name, image_t* image)
    return SUCCESS;
 }
 
-///* PNG_BYTES TO RGB VALUES */
-//void process_file(void)
-//{
-//   if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_RGB)
-//      abort_("[process_file] input file is PNG_COLOR_TYPE_RGB but must be PNG_COLOR_TYPE_RGBA "
-//            "(lacks the alpha channel)");
-//
-//   if (png_get_color_type(png_ptr, info_ptr) != PNG_COLOR_TYPE_RGBA)
-//      abort_("[process_file] color_type of input file must be PNG_COLOR_TYPE_RGBA (%d) (is %d)",
-//            PNG_COLOR_TYPE_RGBA, png_get_color_type(png_ptr, info_ptr));
-//
-//   for (y=0; y<height; y++) {
-//      png_byte* row = row_pointers[y];
-//      for (x=0; x<width; x++) {
-//         png_byte* ptr = &(row[x*4]);
-//         printf("Pixel at position [ %d - %d ] has RGBA values: %d - %d - %d - %d\n",
-//               x, y, ptr[0], ptr[1], ptr[2], ptr[3]);
-//
-//         /* set red value to 0 and green value to the blue one */
-//         ptr[0] = 0;
-//         ptr[1] = ptr[2];
-//      }
-//   }
-//}
-
-
 void image_t_scale
    (  const image_t* const image
    ,  image_t* const       scaled
@@ -232,7 +206,6 @@ void image_t_scale
          sum[x_scaled][4] = 0;  // #
       }
 
-      //int y_block_min = min(y_block_size, image->height - y_scaled * y_block_size);
       int y_block_size = y_block_size_min + (y_scaled < y_block_rest ? 1 : 0);
       for(y_block = 0; y_block < y_block_size; ++y_block)
       {
@@ -240,7 +213,6 @@ void image_t_scale
          data_row = data + shift;
          for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
          {
-            //int x_block_min = min(x_block_size, image->width - x_scaled * x_block_size);
             int x_block_size = x_block_size_min + (x_scaled < x_block_rest ? 1 : 0);
             for(x_block = 0; x_block < x_block_size; ++x_block)
             {
@@ -373,8 +345,8 @@ int main(int argc, char* argv[])
    }
    
    image_t_print(&image);
-   image_t_scale_percent(&image, &scaled, 0.10);
-   //image_t_scale(&image, &scaled, 100, 100);
+   image_t_scale_percent(&image, &scaled, 0.1);
+   //image_t_scale(&image, &scaled, 200, 100);
 
    draw_image(&scaled, buffer);
 
