@@ -7,6 +7,8 @@
 
 #include <png.h>
 
+#define __termpng_attribute_unused__ __attribute__((unused))
+
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
       __typeof__ (b) _b = (b); \
@@ -79,15 +81,15 @@ status_t read_png(char* file_name, image_t* image)
    FILE *fp = fopen(file_name, "rb");
    if (!fp)
       abort_("[read_png_file] File %s could not be opened for reading", file_name);
-   fread(header, 1, 8, fp);
+   if(fread(header, 1, 8, fp) != 8)
+      abort_("[read_png_file] File %s, could not read header", file_name);
    if (png_sig_cmp(header, 0, 8))
       abort_("[read_png_file] File %s is not recognized as a PNG file", file_name);
-
 
    /* initialize stuff */
    png_structp png_ptr;
    png_infop info_ptr;
-   int number_of_passes;
+   int number_of_passes __termpng_attribute_unused__;
 
    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
@@ -350,7 +352,8 @@ int main(int argc, char* argv[])
    //image_t_scale(&image, &scaled, 200, 100);
 
    draw_image(&scaled, buffer);
-
+   
+   image_t_destroy(&scaled);
    image_t_destroy(&image);
 
    return 0;
