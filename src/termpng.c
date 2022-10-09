@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <math.h>
+#include <assert.h>
 
 #include <png.h>
 
@@ -24,6 +25,13 @@ typedef enum
 ,  SUCCESS
 ,  NOT_PNG 
 } status_t;
+
+typedef enum
+{  SCALE_SSAA
+,  SCALE_FIRST
+,  SCALE_LAST
+,  SCALE_CENTER
+} scale_t;
 
 void abort_(const char * s, ...)
 {
@@ -161,6 +169,7 @@ void image_t_scale
    ,  image_t* const       scaled
    ,  int                  scaled_width
    ,  int                  scaled_height
+   ,  scale_t              scale
    )
 {
    scaled_height = (scaled_height % 2 == 0) ? scaled_height : scaled_height + 1; /* make sure height is an even number */
@@ -196,47 +205,92 @@ void image_t_scale
    color32_t* scale_data_row;
    color32_t* data_row;
 
-   int y_block, x_block;
-   int y_scaled, x_scaled;
-   for(y_scaled = 0; y_scaled < scaled->height; ++y_scaled)
-   {  
-      for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+   switch(scale)
+   {
+      case SCALE_FIRST:
+      case SCALE_LAST:
+      case SCALE_CENTER:
       {
-         sum[x_scaled][0] = 0;  // r
-         sum[x_scaled][1] = 0;  // g
-         sum[x_scaled][2] = 0;  // b
-         sum[x_scaled][3] = 0;  // a
-         sum[x_scaled][4] = 0;  // #
-      }
-
-      int y_block_size = y_block_size_min + (y_scaled < y_block_rest ? 1 : 0);
-      for(y_block = 0; y_block < y_block_size; ++y_block)
-      {
-         const int shift = ( y_scaled * y_block_size_min + y_block + min(y_scaled, y_block_rest)) * image->width;
-         data_row = data + shift;
-         for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+         int y_scaled, x_scaled;
+         for(y_scaled = 0; y_scaled < scaled->height; ++y_scaled)
          {
-            int x_block_size = x_block_size_min + (x_scaled < x_block_rest ? 1 : 0);
-            for(x_block = 0; x_block < x_block_size; ++x_block)
+            int y_block_size = y_block_size_min + (y_scaled < y_block_rest ? 1 : 0);
+            
+            int y_block;
+            if(scale == SCALE_FIRST)
+               y_block = 0;
+            else if(scale == SCALE_LAST)
+               y_block = y_block_size - 1;
+            else if(scale == SCALE_CENTER)
+               y_block = ceil((double) y_block_size / 2.0);
+
+            scale_data_row = scale_data + y_scaled * scaled->width;
+            const int shift = ( y_scaled * y_block_size_min + y_block + min(y_scaled, y_block_rest)) * image->width;
+            data_row = data + shift;
+            for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
             {
-               sum[x_scaled][0] += data_row->r;
-               sum[x_scaled][1] += data_row->g;
-               sum[x_scaled][2] += data_row->b;
-               sum[x_scaled][3] += data_row->a;
-               sum[x_scaled][4] += 1;
-               ++data_row;
+               scale_data_row->r = data_row->r;
+               scale_data_row->g = data_row->g;
+               scale_data_row->b = data_row->b;
+               scale_data_row->a = data_row->a;
+               data_row += y_block_size;
+               ++scale_data_row;
             }
          }
+         break;
       }
-      
-      scale_data_row = scale_data + y_scaled * scaled->width;
-      for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+      case SCALE_SSAA:
       {
-         double pixel_scale = 1.0 / sum[x_scaled][4];
-         scale_data_row[x_scaled].r = ceil((double) sum[x_scaled][0] * pixel_scale);
-         scale_data_row[x_scaled].g = ceil((double) sum[x_scaled][1] * pixel_scale);
-         scale_data_row[x_scaled].b = ceil((double) sum[x_scaled][2] * pixel_scale);
-         scale_data_row[x_scaled].a = ceil((double) sum[x_scaled][3] * pixel_scale);
+         int y_block, x_block;
+         int y_scaled, x_scaled;
+         for(y_scaled = 0; y_scaled < scaled->height; ++y_scaled)
+         {  
+            for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+            {
+               sum[x_scaled][0] = 0;  // r
+               sum[x_scaled][1] = 0;  // g
+               sum[x_scaled][2] = 0;  // b
+               sum[x_scaled][3] = 0;  // a
+               sum[x_scaled][4] = 0;  // #
+            }
+
+            int y_block_size = y_block_size_min + (y_scaled < y_block_rest ? 1 : 0);
+            for(y_block = 0; y_block < y_block_size; ++y_block)
+            {
+               const int shift = ( y_scaled * y_block_size_min + y_block + min(y_scaled, y_block_rest)) * image->width;
+               data_row = data + shift;
+               for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+               {
+                  int x_block_size = x_block_size_min + (x_scaled < x_block_rest ? 1 : 0);
+                  for(x_block = 0; x_block < x_block_size; ++x_block)
+                  {
+                     sum[x_scaled][0] += data_row->r;
+                     sum[x_scaled][1] += data_row->g;
+                     sum[x_scaled][2] += data_row->b;
+                     sum[x_scaled][3] += data_row->a;
+                     sum[x_scaled][4] += 1;
+                     ++data_row;
+                  }
+               }
+            }
+            
+            scale_data_row = scale_data + y_scaled * scaled->width;
+            for(x_scaled = 0; x_scaled < scaled->width; ++x_scaled)
+            {
+               double pixel_scale = 1.0 / sum[x_scaled][4];
+               scale_data_row[x_scaled].r = ceil((double) sum[x_scaled][0] * pixel_scale);
+               scale_data_row[x_scaled].g = ceil((double) sum[x_scaled][1] * pixel_scale);
+               scale_data_row[x_scaled].b = ceil((double) sum[x_scaled][2] * pixel_scale);
+               scale_data_row[x_scaled].a = ceil((double) sum[x_scaled][3] * pixel_scale);
+            }
+         }
+         break;
+      }
+
+      default:
+      {
+         abort_("[scale_image] Unknown SCALE type.");
+         break;
       }
    }
 }
@@ -245,11 +299,12 @@ void image_t_scale_percent
    (  const image_t* const image
    ,  image_t* const       scaled
    ,  double               percent
+   ,  scale_t              scale
    )
 {
    int width  = round(image->width  * percent);
    int height = round(image->height * percent);
-   image_t_scale(image, scaled, width, height);
+   image_t_scale(image, scaled, width, height, scale);
 }
 
 
@@ -348,7 +403,7 @@ int main(int argc, char* argv[])
    }
    
    image_t_print(&image);
-   image_t_scale_percent(&image, &scaled, 0.1);
+   image_t_scale_percent(&image, &scaled, 0.1, SCALE_SSAA);
    //image_t_scale(&image, &scaled, 200, 100);
 
    draw_image(&scaled, buffer);
