@@ -307,6 +307,40 @@ void image_t_scale_percent
    image_t_scale(image, scaled, width, height, scale);
 }
 
+void image_t_crop
+   (  const image_t* const image
+   ,  image_t*       const cropped
+   ,  int x_crop_begin
+   ,  int y_crop_begin
+   ,  int x_crop_end
+   ,  int y_crop_end
+   )
+{
+   cropped->width  = x_crop_end - x_crop_begin;
+   cropped->height = y_crop_end - y_crop_begin;
+   cropped->color_type = image->color_type;
+   cropped->bit_depth  = image->bit_depth;
+   cropped->data   = malloc(cropped->width * cropped->height * sizeof(color32_t));
+
+   color32_t* data_row;
+   color32_t* cropped_data = (color32_t*) cropped->data;
+   
+   int y, x;
+   for(y = y_crop_begin; y < y_crop_end; ++y)
+   {
+      data_row = (color32_t*) image->data + y * image->width + x_crop_begin;
+      for(x = x_crop_begin; x < x_crop_end; ++x)
+      {
+         cropped_data->r = data_row->r;
+         cropped_data->g = data_row->g;
+         cropped_data->b = data_row->b;
+         cropped_data->a = data_row->a;
+         ++cropped_data;
+         ++data_row;
+      }
+   }
+}
+
 
 /**
  * Utilities for drawing image to terminal
@@ -395,6 +429,7 @@ int main(int argc, char* argv[])
    char* file_name = argv[1];
    image_t image;
    image_t scaled;
+   image_t cropped;
    char buffer[1024 * 1024 * 4];
    
    if(read_png(file_name, &image) != SUCCESS)
@@ -405,8 +440,10 @@ int main(int argc, char* argv[])
    image_t_print(&image);
    image_t_scale_percent(&image, &scaled, 0.1, SCALE_SSAA);
    //image_t_scale(&image, &scaled, 200, 100);
+   //
+   image_t_crop(&scaled, &cropped, 11, 10, scaled.width - 10, scaled.height - 10);
 
-   draw_image(&scaled, buffer);
+   draw_image(&cropped, buffer);
    
    image_t_destroy(&scaled);
    image_t_destroy(&image);
