@@ -167,11 +167,49 @@ void abort_(const char * s, ...)
 
 typedef struct 
 {
-    uint32_t b:8;
-    uint32_t g:8;
-    uint32_t r:8;
-    uint32_t a:8;
+   uint32_t r:8;
+   uint32_t g:8;
+   uint32_t b:8;
+   uint32_t a:8;
 } color32_t;
+
+typedef struct
+{
+   uint32_t r:16;
+   uint32_t g:16;
+   uint32_t b:16;
+   uint32_t a:16;
+} color64_t;
+
+int color32_t_is_equal_rgb
+   (  const color32_t   color1
+   ,  const color32_t   color2
+   )
+{
+   if (  color1.r == color2.r
+      && color1.g == color2.g
+      && color1.b == color2.b
+      )
+   {
+      return 1;
+   }
+   
+   return 0;
+}
+
+void convert_color64_t_to_color32_t
+   (  const color64_t* const color64
+   ,        color32_t* const color32
+   )
+{
+   int range64 = 65536;
+   int range32 = 256;
+
+   color32->r = (int) ((double) color64->r / (double) range64 * (double) range32);
+   color32->g = (int) ((double) color64->g / (double) range64 * (double) range32);
+   color32->b = (int) ((double) color64->b / (double) range64 * (double) range32);
+   color32->a = (int) ((double) color64->a / (double) range64 * (double) range32);
+}
 
 void apply_gamma_correction(color32_t* color, float exposure, float gamma)
 {
@@ -463,8 +501,8 @@ void image_t_crop
    }
 }
 
-void image_t_background
-   (  image_t* const image
+void image_t_apply_background
+   (  image_t* const  image
    ,  int r
    ,  int g
    ,  int b
@@ -485,6 +523,108 @@ void image_t_background
    }
 }
 
+void image_t_crop_background
+   (  const image_t* const image
+   ,        image_t* const cropped
+   ,  int r
+   ,  int g
+   ,  int b
+   )
+{
+   color32_t background = {r, g, b, 0};
+   
+   // Find crop indeces
+   int y, x;
+   int crop_y_begin = image->height, crop_y_end = 0;
+   int crop_x_begin = image->width,  crop_x_end = 0;
+
+   color32_t* data = (color32_t*) image->data;
+
+   for(y = 0; y < image->height; ++y)
+   {
+      for(x = 0; x < image->width; ++x)
+      {
+         if(!color32_t_is_equal_rgb(*data, background))
+         {
+            crop_y_begin = min(crop_y_begin, y);
+            crop_y_end   = max(crop_y_end,   y);
+            crop_x_begin = min(crop_x_begin, x);
+            crop_x_end   = max(crop_x_end,   x);
+         }
+         ++data;
+      }
+   }
+   
+   // Crop the image based on the indices found
+   if (  crop_y_begin != image->height
+      && crop_x_begin != image->width
+      && crop_y_end   != 0
+      && crop_x_end   != 0
+      )
+   {
+      image_t_crop(image, cropped, crop_x_begin, crop_y_begin, crop_x_end + 1, crop_y_end + 1);
+   }
+   else
+   {
+      // Just copy (or make function return a status, whether it did the crop or not)
+      assert(0);
+   }
+}
+
+void image_t_standardize_edge
+   (  image_t* const image
+   ,  int r
+   ,  int g
+   ,  int b
+   ,  int r_new
+   ,  int g_new
+   ,  int b_new
+   )
+{
+   color32_t background     = {r,     g,     b,     0};
+   color32_t background_new = {r_new, g_new, b_new, 0};
+
+   const int width  = image->width;
+   const int height = image->height;
+   int y, x;
+
+   color32_t* data = (color32_t*) image->data;
+   color32_t* data_row;
+
+   for(y = 0; y < height; ++y)
+   {
+      data_row = data + y * width;
+      for(x = 0; x < width; ++x)
+      {
+         if(color32_t_is_equal_rgb(data_row[x], background))
+         {
+            data_row[x].r = background_new.r;
+            data_row[x].g = background_new.g;
+            data_row[x].b = background_new.b;
+         }
+         else
+         {
+            if(y != 0 && y != height - 1)
+               break;
+         }
+      }
+
+      for(x = width - 1; x >= 0; --x)
+      {
+         if(color32_t_is_equal_rgb(data_row[x], background))
+         {
+            data_row[x].r = background_new.r;
+            data_row[x].g = background_new.g;
+            data_row[x].b = background_new.b;
+         }
+         else
+         {
+            if(y != 0 && y != height - 1)
+               break;
+         }
+      }
+   }
+}
 
 
 /**
@@ -499,7 +639,10 @@ void image_t_background
 /**
  * Draw image using a work buffer. 
  **/
-void draw_image(const image_t* const image, char* buffer)
+void draw_image
+   (  const image_t* const image
+   ,  char* buffer
+   )
 {
 	/* fill output buffer */
    int resx = image->width;
@@ -512,9 +655,9 @@ void draw_image(const image_t* const image, char* buffer)
 	char *buf = buffer;
    
    // Set buffer to write from 1,1
-   *buf++ = '\033'; *buf++ = '[';
-   *buf++ = '1';    *buf++ = ';';
-   *buf++ = '1';    *buf++ = 'H';
+   //*buf++ = '\033'; *buf++ = '[';
+   //*buf++ = '1';    *buf++ = ';';
+   //*buf++ = '1';    *buf++ = 'H';
 
 	for (int row = 0; row < resy; row+=2) {
 		for (int col = 0; col < resx; col++) {
@@ -556,9 +699,9 @@ void draw_image(const image_t* const image, char* buffer)
 	   pixel_bg += resx;
 	}
    /* Reset char (not really needed, but also doesn't cost that much) and NULL terminate */
-	//*buf++ = '\033'; *buf++ = '[';
-	//*buf++ = '0';
-	//*buf++ = 'm';
+	*buf++ = '\033'; *buf++ = '[';
+	*buf++ = '0';
+	*buf++ = 'm';
 	*buf = '\0'; /* NULL termination */
 
 	/* flush output buffer */
@@ -581,16 +724,23 @@ int main(int argc, char* argv[])
    {
       printf("Error\n");
    }
+
+   color64_t term_background64 = { 0x3030, 0x0a0a, 0x2424, 0};
+   color32_t term_background32;
+   convert_color64_t_to_color32_t(&term_background64, &term_background32);
    
    image_t_print(&image);
    image_t_scale_percent(&image, &scaled, 0.1, SCALE_SSAA);
-   //image_t_background(&scaled, 255, 255, 255);
-   image_t_background(&scaled, 0x3030, 0x0a0a, 0x2424);
+   image_t_apply_background(&scaled, 255, 255, 255);
+   image_t_crop_background(&scaled, &cropped, 255, 255, 255);
+   image_t_standardize_edge(&cropped, 255, 255, 255, term_background32.r, term_background32.g, term_background32.b);
+   //image_t_background(&scaled, 0x3030, 0x0a0a, 0x2424);
    //image_t_scale(&image, &scaled, 200, 100);
    //
    //image_t_crop(&scaled, &cropped, 11, 10, scaled.width - 10, scaled.height - 10);
 
-   draw_image(&scaled, buffer);
+   //draw_image(&scaled, buffer);
+   draw_image(&cropped, buffer);
    
    image_t_destroy(&scaled);
    image_t_destroy(&image);
