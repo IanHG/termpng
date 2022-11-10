@@ -106,7 +106,7 @@ image_t_print
 
 status_t 
 image_t_read_png
-   (  char*    file_name
+   (  const char* const file_name
    ,  image_t* image
    )
 {
@@ -569,10 +569,10 @@ void image_t_draw
 	color32_t *pixel_fg = pixel_bg + resx;
 	char *buf = buffer;
    
-   // Set buffer to write from 1,1
-   *buf++ = '\033'; *buf++ = '[';
-   *buf++ = '1';    *buf++ = ';';
-   *buf++ = '1';    *buf++ = 'H';
+   //// Set buffer to write from 1,1
+   //*buf++ = '\033'; *buf++ = '[';
+   //*buf++ = '1';    *buf++ = ';';
+   //*buf++ = '1';    *buf++ = 'H';
 
 	for (int row = 0; row < resy; row+=2) {
 		for (int col = 0; col < resx; col++) {

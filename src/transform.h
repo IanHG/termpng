@@ -6,9 +6,11 @@
 
 typedef enum
 {  NONE
+,  READ
 ,  SCALE
 ,  CROP
 ,  DRAW
+,  BACKGROUND
 }  transform_type_t;
 
 /**
@@ -41,9 +43,10 @@ transform_t_destroy
  **/
 int 
 transform_parse_args
-   (  int   argc
-   ,  char* argv[]
-   ,  transform_t* transform_ptr
+   (  int*           argn_ptr
+   ,  int            argc
+   ,  char*          argv[]
+   ,  transform_t*   transform_ptr
    );
 
 /**

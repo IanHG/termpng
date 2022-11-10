@@ -67,7 +67,7 @@ image_t_print
 
 status_t 
 image_t_read_png
-   (  char*    file_name
+   (  const char* const file_name
    ,  image_t* image
    );
 
@@ -91,6 +91,14 @@ image_t_scale_percent
 void image_t_draw
    (  const image_t* const image
    ,  char* buffer
+   );
+
+void 
+image_t_apply_background
+   (  image_t* const  image
+   ,  int r
+   ,  int g
+   ,  int b
    );
 
 #endif /* IMAGE_H_INCLUDED */

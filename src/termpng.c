@@ -132,39 +132,21 @@ struct
 //}
 //
 
-
-
 int main(int argc, char* argv[])
 {  
-   char* file_name = argv[argc - 1];
-   image_t image;
-   //image_t scaled;
-   //image_t cropped;
-   //char buffer[1024 * 1024 * 4];
+   //color64_t term_background64 = { 0x3030, 0x0a0a, 0x2424, 0};
+   //color32_t term_background32;
+   //convert_color64_t_to_color32_t(&term_background64, &term_background32);
    
-   if(image_t_read_png(file_name, &image) != SUCCESS)
-   {
-      printf("Error\n");
-   }
-
-   color64_t term_background64 = { 0x3030, 0x0a0a, 0x2424, 0};
-   color32_t term_background32;
-   convert_color64_t_to_color32_t(&term_background64, &term_background32);
-
+   // Read and run transformation pipeline
+   image_t image;
    transform_t* transform = (transform_t*) malloc(sizeof(transform_t));
    transform_t_init(transform);
-   transform_parse_args(argc, argv, transform);
-   
-   //transform_t* next = transform_t_make_next(transform);
-   //next->type    = SCALE;
-   //transform_scale_t* transform_scale = (transform_scale_t*) malloc(sizeof(transform_scale_t));
-   //transform_scale->percent = 0.1;
-   //transform_scale->scale   = SCALE_SSAA;
-   //next->options = transform_scale;
-   //next = transform_t_make_next(next);
-   //next->type = DRAW;
+   int argn = 1;
+   transform_parse_args(&argn, argc, argv, transform);
    transform_apply_pipeline(&image, transform);
 
+   // Clean-up
    transform_t_destroy(transform);
    image_t_destroy(&image);
    
@@ -177,15 +159,7 @@ int main(int argc, char* argv[])
    ////image_t_background(&scaled, 0x3030, 0x0a0a, 0x2424);
    ////image_t_scale(&image, &scaled, 200, 100);
    ////
-   ////image_t_crop(&scaled, &cropped, 11, 10, scaled.width - 10, scaled.height - 10);
    ////
-   ////puts("\e[?1049h"); // Go to alternate screen buffer (used for fullscreen applications)
-   //draw_image(&scaled, buffer);
-   ////puts("\e[?1049l"); // Go back to standard screen buffer
-   ////draw_image(&cropped, buffer);
-   //
-   //image_t_destroy(&scaled);
-   //image_t_destroy(&image);
 
    return 0;
 }
