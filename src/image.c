@@ -362,7 +362,8 @@ image_t_crop
    for(y = y_crop_begin; y < y_crop_end; ++y)
    {
       data_row = (color32_t*) image->data + y * image->width + x_crop_begin;
-      for(x = x_crop_begin; x < x_crop_end; ++x)
+      // NB: Can do something faster here with a memcpy, just copy a whole row of bits, no need for a forloop
+      for(x = x_crop_begin; x < x_crop_end; ++x) 
       {
          cropped_data->r = data_row->r;
          cropped_data->g = data_row->g;
