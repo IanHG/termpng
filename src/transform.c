@@ -384,10 +384,10 @@ transform_parse_crop
       else if(strcmp(argv[argn], "--define") == 0)
       {
          assert(argn + 4 < argc);
-         transform_crop_options->y_crop_begin = atoi(argv[argn + 1]);
-         transform_crop_options->x_crop_begin = atoi(argv[argn + 2]);
-         transform_crop_options->y_crop_end   = atoi(argv[argn + 3]);
-         transform_crop_options->x_crop_end   = atoi(argv[argn + 4]);
+         transform_crop_options->x_crop_begin = atoi(argv[argn + 1]);
+         transform_crop_options->y_crop_begin = atoi(argv[argn + 2]);
+         transform_crop_options->x_crop_end   = atoi(argv[argn + 3]);
+         transform_crop_options->y_crop_end   = atoi(argv[argn + 4]);
          argn += 4;
       }
       else if(strcmp(argv[argn], "--y_begin") == 0)

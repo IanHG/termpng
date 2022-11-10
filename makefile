@@ -2,7 +2,8 @@ CXX=gcc
 CXXSTD=
 CXXOPTIMFLAGS=-O3 -g -flto -msse4.1 -mfma
 CXXDEBUGFLAGS=-O0 -g -rdynamic
-CXXFLAGS=-Wall $(CXXOPTIMFLAGS)
+#CXXFLAGS=-Wall $(CXXOPTIMFLAGS)
+CXXFLAGS=-Wall $(CXXDEBUGFLAGS)
 LIBS=-lpng -lm
 
 # find source files
