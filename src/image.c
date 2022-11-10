@@ -346,6 +346,9 @@ image_t_crop
    ,  int y_crop_end
    )
 {
+   y_crop_end = min(image->height, y_crop_end);
+   x_crop_end = min(image->width , x_crop_end);
+
    cropped->width  = x_crop_end - x_crop_begin;
    cropped->height = y_crop_end - y_crop_begin;
    cropped->color_type = image->color_type;

@@ -54,8 +54,8 @@ transform_parse_args
  **/
 int 
 transform_apply_pipeline
-   (  image_t*       image
-   ,  transform_t*   transform
+   (  image_t*             image
+   ,  const transform_t*   transform
    );
 
 #endif /* TRANSFORM_H_INCLUDED */

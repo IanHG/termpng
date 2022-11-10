@@ -101,4 +101,23 @@ image_t_apply_background
    ,  int b
    );
 
+void 
+image_t_crop
+   (  const image_t* const image
+   ,  image_t*       const cropped
+   ,  int x_crop_begin
+   ,  int y_crop_begin
+   ,  int x_crop_end
+   ,  int y_crop_end
+   );
+
+void 
+image_t_crop_background
+   (  const image_t* const image
+   ,        image_t* const cropped
+   ,  int r
+   ,  int g
+   ,  int b
+   );
+
 #endif /* IMAGE_H_INCLUDED */

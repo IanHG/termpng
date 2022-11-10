@@ -4,12 +4,13 @@
 #include <string.h>
 #include <assert.h>
 
-/**
- *
- **/
 int TRANSFORM_FAILLURE = 0;
 int TRANSFORM_SUCCESS  = 1;
 
+/**
+ * transform_t helper functions.
+ **/
+//! Initialize transform_t
 void 
 transform_t_init
    (  transform_t* transform
@@ -20,6 +21,7 @@ transform_t_init
    transform->next      = NULL;
 }
 
+//! Allocate a new transform_t and add to the list. Will return pointer to next.
 transform_t* 
 transform_t_make_next
    (  transform_t* transform
@@ -30,6 +32,7 @@ transform_t_make_next
    return transform->next;
 }
 
+//! Destroy a transform_t. Will loop through the list and de-allocate all allocated transforms and options storage.
 void 
 transform_t_destroy
    (  transform_t* transform
@@ -250,13 +253,179 @@ transform_parse_background
    transform->type    = BACKGROUND;
 
    transform_background_options_t* transform_background_options = (transform_background_options_t*) malloc(sizeof(transform_background_options_t));
-   transform_background_options->color.r = 255;
-   transform_background_options->color.g = 255;
-   transform_background_options->color.b = 255;
+   transform_background_options->color.r = 0;
+   transform_background_options->color.g = 0;
+   transform_background_options->color.b = 0;
+   
+   int argn = *argn_ptr;
+   argn += 1;
+
+   while(argn < argc)
+   {
+      // Check if first char is a '-'
+      if(argv[argn][0] != '-')
+      {
+         printf("Breaking on '%s' (first char: '%c').\n", argv[argn], argv[argn][0]);
+         break;
+      }
+
+      // If first char is '-', we try to parse options
+      if(strcmp(argv[argn], "--color") == 0)
+      {
+         assert(argn + 3 < argc);
+         transform_background_options->color.r = atoi(argv[argn + 1]);
+         transform_background_options->color.g = atoi(argv[argn + 2]);
+         transform_background_options->color.b = atoi(argv[argn + 3]);
+         argn += 3;
+      }
+      else if(strcmp(argv[argn], "--red") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_background_options->color.r = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else if(strcmp(argv[argn], "--green") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_background_options->color.g = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else if(strcmp(argv[argn], "--blue") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_background_options->color.b = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else if(strcmp(argv[argn], "--gray") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_background_options->color.r = atoi(argv[argn + 1]);
+         transform_background_options->color.g = atoi(argv[argn + 1]);
+         transform_background_options->color.b = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else
+      {
+         printf("[transform:background] Unknown option '%s'.\n", argv[argn]);
+         assert(0);
+      }
+
+      argn += 1;
+   }
 
    transform->options = transform_background_options;
+   
+   *argn_ptr = argn;
 
-   ++(*argn_ptr);
+   return 1;
+}
+
+/**
+ * Parse "crop".
+ **/
+typedef enum
+{  CROP_DEFAULT
+,  CROP_EDGE
+}  crop_type_t;
+
+typedef struct
+{
+   crop_type_t type;
+   color32_t   bg_color; // Background color for CROP_EDGE
+   int         x_crop_begin;
+   int         y_crop_begin;
+   int         x_crop_end;
+   int         y_crop_end;
+}  transform_crop_options_t;
+
+static int 
+transform_parse_crop
+   (  int*           argn_ptr
+   ,  int            argc
+   ,  char**         argv
+   ,  transform_t**  transform_ptr
+   )
+{
+   *transform_ptr = transform_t_make_next(*transform_ptr);
+   transform_t* transform = *transform_ptr;
+   
+   // Set type
+   transform->type = CROP;
+
+   transform_crop_options_t* transform_crop_options = (transform_crop_options_t*) malloc(sizeof(transform_crop_options_t));
+   transform_crop_options->type           = CROP_DEFAULT;
+   transform_crop_options->y_crop_begin   = 0;
+   transform_crop_options->x_crop_begin   = 0;
+   transform_crop_options->y_crop_end     = 10000; // should be max int
+   transform_crop_options->x_crop_end     = 10000; // should be max int
+   
+   int argn = *argn_ptr;
+   argn += 1;
+
+   while(argn < argc)
+   {
+      // Check if first char is a '-'
+      if(argv[argn][0] != '-')
+      {
+         printf("Breaking on '%s' (first char: '%c').\n", argv[argn], argv[argn][0]);
+         break;
+      }
+
+      // If first char is '-', we try to parse options
+      if(strcmp(argv[argn], "--edge") == 0)
+      {
+         assert(argn + 3 < argc);
+         transform_crop_options->type = CROP_EDGE;
+         transform_crop_options->bg_color.r = atoi(argv[argn + 1]);
+         transform_crop_options->bg_color.g = atoi(argv[argn + 2]);
+         transform_crop_options->bg_color.b = atoi(argv[argn + 3]);
+         argn += 3;
+      }
+      else if(strcmp(argv[argn], "--define") == 0)
+      {
+         assert(argn + 4 < argc);
+         transform_crop_options->y_crop_begin = atoi(argv[argn + 1]);
+         transform_crop_options->x_crop_begin = atoi(argv[argn + 2]);
+         transform_crop_options->y_crop_end   = atoi(argv[argn + 3]);
+         transform_crop_options->x_crop_end   = atoi(argv[argn + 4]);
+         argn += 4;
+      }
+      else if(strcmp(argv[argn], "--y_begin") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_crop_options->y_crop_begin = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else if(strcmp(argv[argn], "--y_end") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_crop_options->y_crop_end = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else if(strcmp(argv[argn], "--x_begin") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_crop_options->x_crop_begin = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else if(strcmp(argv[argn], "--x_end") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_crop_options->x_crop_end = atoi(argv[argn + 1]);
+         argn += 1;
+      }
+      else
+      {
+         printf("[transform:crop] Unknown option '%s'.\n", argv[argn]);
+         assert(0);
+      }
+
+      argn += 1;
+   }
+
+   transform->options = transform_crop_options;
+   
+   *argn_ptr = argn;
 
    return 1;
 }
@@ -271,10 +440,12 @@ typedef struct
 }  transform_command_t;
 
 static transform_command_t command_table [] =
-{  {  "scale", transform_parse_scale }
-,  {  "read" , transform_parse_read  }
-,  {  "draw" , transform_parse_draw  }
-,  {  "bg", transform_parse_background  }
+{  {  "scale"     , transform_parse_scale }
+,  {  "read"      , transform_parse_read  }
+,  {  "draw"      , transform_parse_draw  }
+,  {  "bg"        , transform_parse_background  }
+,  {  "background", transform_parse_background  }
+,  {  "crop"      , transform_parse_crop  }
 };
 
 //! Get index of command with name, if it exists, otherwise returns -1.
@@ -284,7 +455,7 @@ transform_command_index
    )
 {
    int i;
-   for(i = 0; i < 4; ++i)
+   for(i = 0; i < 6; ++i)
    {
       printf("Testing keyword '%s'.\n", command_table[i].name);
       if(strcmp(command_table[i].name, name) == 0)
@@ -351,11 +522,12 @@ transform_apply_read
 
 int 
 transform_apply_scale
-   (  image_t*                        image
-   ,  const transform_scale_t* const  options
+   (  image_t*          image
+   ,  const void* const options_ptr
    )
 {
    image_t scaled;
+   transform_scale_t* options = (transform_scale_t*) options_ptr;
    
    // Scale
    if(options->percent)
@@ -375,9 +547,39 @@ transform_apply_scale
 }
 
 int 
+transform_apply_crop
+   (  image_t*          image
+   ,  const void* const options_ptr
+   )
+{
+   image_t modified;
+   transform_crop_options_t* options = (transform_crop_options_t*) options_ptr;
+   
+   // Do operation
+   switch(options->type)
+   {
+      case CROP_DEFAULT:
+         image_t_crop(image, &modified, options->x_crop_begin, options->y_crop_begin, options->x_crop_end, options->y_crop_end);
+         break;
+      case CROP_EDGE:
+         image_t_crop_background(image, &modified, options->bg_color.r, options->bg_color.g, options->bg_color.b);
+         break;
+   }
+
+   // Clean-up
+   image_t_swap(image, &modified);
+   image_t_destroy(&modified);
+
+   return TRANSFORM_SUCCESS;
+}
+
+/**
+ * Apply a transform pipeline to an image.
+ **/
+int 
 transform_apply_pipeline
-   (  image_t*       image
-   ,  transform_t*   transform
+   (  image_t*             image
+   ,  const transform_t*   transform
    )
 {
    int status = TRANSFORM_SUCCESS;
@@ -400,12 +602,14 @@ transform_apply_pipeline
          case SCALE:
          {
             printf("SCALE\n");
-            status = transform_apply_scale(image, (transform_scale_t*) transform->options);
+            status = transform_apply_scale(image, transform->options);
             break;
          }
          case CROP:
          {
             printf("CROP\n");
+            status = transform_apply_crop(image, transform->options);
+            break;
          }
          case DRAW:
          {
