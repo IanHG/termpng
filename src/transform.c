@@ -220,6 +220,19 @@ transform_parse_scale
 /**
  * Parse "draw" (takes no options).
  **/
+typedef enum
+{  DRAW_DEFAULT
+,  DRAW_POS
+}  draw_type_t;
+
+typedef struct
+{
+   draw_type_t type;
+   int         x_pos;
+   int         y_pos;
+   char*       path;
+} transform_draw_options_t;
+
 static int 
 transform_parse_draw
    (  int*           argn_ptr
@@ -231,10 +244,60 @@ transform_parse_draw
    *transform_ptr = transform_t_make_next(*transform_ptr);
    transform_t* transform = *transform_ptr;
    
+   // Create options with defaults
+   transform_draw_options_t* transform_draw = (transform_draw_options_t*) malloc(sizeof(transform_draw_options_t));
+   transform_draw->type    = DRAW_DEFAULT;
+   transform_draw->x_pos   = 0;
+   transform_draw->y_pos   = 0;
+   transform_draw->path    = NULL;
+
    // Set type
    transform->type    = DRAW;
 
-   ++(*argn_ptr);
+   int argn = *argn_ptr;
+   ++argn;
+   while(argn < argc)
+   {
+      // Check if first char is a '-'
+      if(argv[argn][0] != '-')
+      {
+         printf("Breaking on '%s' (first char: '%c').\n", argv[argn], argv[argn][0]);
+         break;
+      }
+
+      // If first char is '-', we try to parse options
+      if(strcmp(argv[argn], "--x_pos") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_draw->type  = DRAW_POS;
+         transform_draw->x_pos = atoi(argv[argn + 1]);
+         ++argn;
+      }
+      else if(strcmp(argv[argn], "--y_pos") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_draw->type  = DRAW_POS;
+         transform_draw->y_pos = atoi(argv[argn + 1]);
+         ++argn;
+      }
+      else if(strcmp(argv[argn], "--file") == 0)
+      {
+         assert(argn + 1 < argc);
+         transform_draw->path = string_allocate_and_copy(argv[argn + 1]);
+         ++argn;
+      }
+      else
+      {
+         printf("Unknown option '%s'.\n", argv[argn]);
+         assert(0);
+      }
+
+
+      ++argn;
+   }
+   *argn_ptr = argn;
+
+   transform->options    = transform_draw;
 
    return 1;
 }
@@ -455,10 +518,16 @@ transform_options_destroy
             free(options_read->path);
          break;
       }
+      case DRAW:
+      {
+         transform_draw_options_t* options_draw = (transform_draw_options_t*) options;
+         if(options_draw->path)
+            free(options_draw->path);
+         break;
+      }
       case NONE:
       case SCALE:
       case CROP:
-      case DRAW:
       case BACKGROUND:
          /* Do nothing */
          break;
@@ -608,6 +677,31 @@ transform_apply_crop
    return TRANSFORM_SUCCESS;
 }
 
+int
+transform_apply_draw
+   (  image_t*    image
+   ,  const void* const options_ptr
+   )
+{
+   transform_draw_options_t* options = (transform_draw_options_t*) options_ptr;
+
+   char buffer[1024 * 1024 * 4];
+
+   if(options->path)
+   {
+      FILE* file = fopen(options->path, "w+");
+      image_t_draw(image, buffer, options->x_pos, options->y_pos, file);
+      fclose(file);
+   }
+   else
+   {
+      // No path given, we just print ot stdout
+      image_t_draw(image, buffer, options->x_pos, options->y_pos, stdout);
+   }
+
+   return TRANSFORM_SUCCESS;
+}
+
 /**
  * Apply a transform pipeline to an image.
  **/
@@ -649,8 +743,9 @@ transform_apply_pipeline
          case DRAW:
          {
             printf("DRAW\n");
-            char buffer[1024 * 1024 * 4];
-            image_t_draw(image, buffer);
+            //char buffer[1024 * 1024 * 4];
+            //image_t_draw(image, buffer);
+            status = transform_apply_draw(image, transform->options);
             break;
          }
          case BACKGROUND:

@@ -561,6 +561,9 @@ image_t_standardize_edge
 void image_t_draw
    (  const image_t* const image
    ,  char* buffer
+   ,  int   x_pos
+   ,  int   y_pos
+   ,  FILE* file
    )
 {
 	/* fill output buffer */
@@ -573,10 +576,15 @@ void image_t_draw
 	color32_t *pixel_fg = pixel_bg + resx;
 	char *buf = buffer;
    
-   //// Set buffer to write from 1,1
-   //*buf++ = '\033'; *buf++ = '[';
-   //*buf++ = '1';    *buf++ = ';';
-   //*buf++ = '1';    *buf++ = 'H';
+   if(x_pos && y_pos)
+   {
+      // Set buffer to write from 1,1
+      *buf++ = '\033'; *buf++ = '[';
+      buf += sprintf(buf, "%i", y_pos);
+      *buf++ = ';';
+      buf += sprintf(buf, "%i", x_pos);
+      *buf++ = 'H';
+   }
 
 	for (int row = 0; row < resy; row+=2) {
 		for (int col = 0; col < resx; col++) {
@@ -625,7 +633,7 @@ void image_t_draw
 
 	/* flush output buffer */
 	//CALL_STDOUT(fputs(buffer, stdout), "DG_DrawFrame: fputs error %d");
-	fputs(buffer, stdout);
+	fputs(buffer, file);
 
 	/* clear output buffer */
 	//memset(buffer, '\0', buf - buffer + 1u);

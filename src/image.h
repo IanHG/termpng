@@ -91,6 +91,9 @@ image_t_scale_percent
 void image_t_draw
    (  const image_t* const image
    ,  char* buffer
+   ,  int   x_pos
+   ,  int   y_pos
+   ,  FILE* file
    );
 
 void 
