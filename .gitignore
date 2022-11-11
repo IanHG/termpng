@@ -2,6 +2,7 @@
 *.d
 *.o
 *.png
+*.jpg
 *.log
 termpng
 *.ascii

@@ -4,8 +4,17 @@
 #include <string.h>
 #include <assert.h>
 
+#include "util.h"
+
 int TRANSFORM_FAILLURE = 0;
 int TRANSFORM_SUCCESS  = 1;
+
+//! Forward declaration
+void
+transform_options_destroy
+   (  transform_type_t  type
+   ,  void*             options
+   );
 
 /**
  * transform_t helper functions.
@@ -46,7 +55,10 @@ transform_t_destroy
 
       // Clean-up previous
       if(prev->options)
+      {
+         transform_options_destroy(prev->type, prev->options);
          free(prev->options);
+      }
       free(prev);
    }
 }
@@ -89,11 +101,8 @@ transform_parse_read
 
    int argn = *argn_ptr;
    assert(argn + 1 < argc);
-   int len = strlen(argv[argn + 1]);
-   transform_read_options->path = (char*) malloc(len + 1);
-   memcpy(transform_read_options->path, argv[argn + 1], len);
-   transform_read_options->path[len] = '\0';
-
+   transform_read_options->path = string_allocate_and_copy(argv[argn + 1]); 
+   
    transform->options = transform_read_options;
 
    argn += 2;
@@ -428,6 +437,32 @@ transform_parse_crop
    *argn_ptr = argn;
 
    return 1;
+}
+
+//!
+void
+transform_options_destroy
+   (  const transform_type_t  type
+   ,  void*                   options
+   )
+{
+   switch(type)
+   {
+      case READ:
+      {
+         transform_read_options_t* options_read = (transform_read_options_t*) options;
+         if(options_read->path)
+            free(options_read->path);
+         break;
+      }
+      case NONE:
+      case SCALE:
+      case CROP:
+      case DRAW:
+      case BACKGROUND:
+         /* Do nothing */
+         break;
+   }
 }
 
 /**

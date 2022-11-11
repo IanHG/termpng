@@ -21,4 +21,10 @@ abort_
    ,  ...
    );
 
+//! Copy a string.
+char* 
+string_allocate_and_copy
+   (  const char* const str
+   );
+
 #endif /* UTIL_H_INCLUDED */
